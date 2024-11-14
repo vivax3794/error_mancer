@@ -1,11 +1,16 @@
-error[E0277]: `?` couldn't convert the error to `Infallible`
+error[E0277]: Error `std::io::Error` not allowed to be returned from this function.
  --> tests/ui/no_errors_anyhow.rs:6:45
   |
 6 |     let _ = std::fs::File::open("hello.txt")?;
-  |                                             ^ the trait `From<std::io::Error>` is not implemented for `Infallible`
+  |                                             ^ `std::io::Error` is not listed in `#[errors]` attribute
   |
-  = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
-  = help: the trait `From<std::io::Error>` is not implemented for `Infallible`
-          but trait `From<!>` is implemented for it
-  = help: for that trait implementation, expected `!`, found `std::io::Error`
-  = note: required for `Result<i32, Infallible>` to implement `FromResidual<Result<Infallible, std::io::Error>>`
+  = help: the trait `ErrorMancerFrom<std::io::Error>` is not implemented for `FooError`
+  = note: Add `std::io::Error` to `#[errors]` attribute or handle this error locally.
+  = help: the trait `FromResidual<Result<Infallible, E>>` is implemented for `Result<T, F>`
+note: required for `FooError` to implement `From<std::io::Error>`
+ --> tests/ui/no_errors_anyhow.rs:4:1
+  |
+4 | #[errors]
+  | ^^^^^^^^^
+  = note: required for `Result<i32, FooError>` to implement `FromResidual<Result<Infallible, std::io::Error>>`
+  = note: this error originates in the attribute macro `errors` (in Nightly builds, run with -Z macro-backtrace for more info)

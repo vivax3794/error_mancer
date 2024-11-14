@@ -115,15 +115,26 @@ fn create_function(
     let inner_type: syn::ReturnType =
         parse_quote!(-> std::result::Result<#ok_return_type, #error_return_type>);
 
-    replace_error_value(&mut signature.output, error_return_type);
+    let replaced = replace_error_value(&mut signature.output, error_return_type);
 
-    let new_func = quote! {
-        #[allow(clippy::needless_question_mark)]
-        #vis #signature {
-            Ok((move || #inner_type { #body })()?)
-        }
-    };
-    Ok((error_enum, new_func))
+    if replaced {
+        let new_func = quote! {
+            #[allow(clippy::needless_question_mark)]
+            #vis #signature {
+                Ok((move || #inner_type { #body })()?)
+            }
+        };
+        Ok((error_enum, new_func))
+    } else {
+        let new_func = quote! {
+            #[allow(clippy::needless_question_mark)]
+            #vis #signature {
+                #error_enum
+                Ok((move || #inner_type { #body })()?)
+            }
+        };
+        Ok((quote!(), new_func))
+    }
 }
 
 fn get_ok_return(return_type: &ReturnType) -> syn::Result<&Type> {
@@ -186,34 +197,36 @@ fn get_ok_return(return_type: &ReturnType) -> syn::Result<&Type> {
     }
 }
 
-fn replace_error_value(return_type: &mut ReturnType, error_type: syn::Type) {
+fn replace_error_value(return_type: &mut ReturnType, error_type: syn::Type) -> bool {
     let ReturnType::Type(_, return_type) = return_type else {
-        return;
+        return false;
     };
 
     let syn::Type::Path(return_type) = return_type.as_mut() else {
-        return;
+        return false;
     };
 
     let Some(last) = return_type.path.segments.last_mut() else {
-        return;
+        return false;
     };
 
     if last.ident != "Result" {
-        return;
+        return false;
     }
 
     let syn::PathArguments::AngleBracketed(arguments) = &mut last.arguments else {
-        return;
+        return false;
     };
 
     if arguments.args.len() < 2 {
-        return;
+        return false;
     }
 
     if let syn::GenericArgument::Type(syn::Type::Infer(_)) = arguments.args[1] {
         arguments.args[1] = syn::GenericArgument::Type(error_type);
+        return true;
     }
+    false
 }
 
 fn generate_error_type(
@@ -265,7 +278,7 @@ fn generate_error_type(
 
         impl<T> ::std::convert::From<T> for #enum_name where Self: ::error_mancer::ErrorMancerFrom<T> {
             fn from(value: T) -> Self {
-                Self::from(value)
+                ::error_mancer::ErrorMancerFrom::from(value)
             }
         }
 
