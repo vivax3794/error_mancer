@@ -50,7 +50,3 @@ impl other_crate::Trait for MyStruct {
 - **Simplified Error Wrapper Enums**: This crate aims to make defining trivial error wrapper enums much easier and more convenient.
 - **Enforcing Error Restrictions**: It aims to allow you to enforce error restrictions on `anyhow::Result` and similar `Result` types.
 - **Compatibility with `thiserror`**: This crate does **not** aim to replace `thiserror` or similar libraries. Instead, it encourages using them in tandem to define errors for use with `error_mancer`.
-
-## Summary
-
-`error_mancer` is a powerful yet simple tool for developers who want a more structured approach to error handling, particularly when working with complex traits or generic error types. By keeping error definitions close to their corresponding methods, it streamlines code management and enforces error consistency.
