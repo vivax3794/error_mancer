@@ -4,6 +4,11 @@ version = "0.2.2"
 edition = "2021"
 description = "Master your errors with precision, context, and effortless control."
 license = "MIT"
+authors = ["vivax3794@protonmail.com"]
+readme = "README.md"
+repository = "https://github.com/vivax3794/error_mancer"
+categories = ["rust-patterns"]
+keywords = ["macro", "attribute-macro", "error", "error-handling"]
 
 [dependencies]
 error_mancer_macros = {path = "../error_mancer_macros", version="0.2.1"}
