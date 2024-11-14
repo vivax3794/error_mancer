@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["error_mancer", "error_mancer_macros"]

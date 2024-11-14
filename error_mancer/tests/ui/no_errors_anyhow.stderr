@@ -1,0 +1,11 @@
+error[E0277]: `?` couldn't convert the error to `Infallible`
+ --> tests/ui/no_errors_anyhow.rs:6:45
+  |
+6 |     let _ = std::fs::File::open("hello.txt")?;
+  |                                             ^ the trait `From<std::io::Error>` is not implemented for `Infallible`
+  |
+  = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+  = help: the trait `From<std::io::Error>` is not implemented for `Infallible`
+          but trait `From<!>` is implemented for it
+  = help: for that trait implementation, expected `!`, found `std::io::Error`
+  = note: required for `Result<i32, Infallible>` to implement `FromResidual<Result<Infallible, std::io::Error>>`

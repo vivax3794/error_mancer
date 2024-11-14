@@ -1,0 +1,15 @@
+[package]
+name = "error_mancer_macros"
+version = "0.2.2"
+edition = "2021"
+license = "MIT"
+description = "proc macro for error_mancer"
+
+[dependencies]
+syn = {version = "2.0", features = ["full", "extra-traits"]}
+quote = "1.0"
+proc-macro2 = "1.0"
+convert_case = "0.6"
+
+[lib]
+proc-macro = true

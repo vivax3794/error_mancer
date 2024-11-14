@@ -1,0 +1,5 @@
+error: Expected function or impl block
+ --> tests/ui/not_fn.rs:4:1
+  |
+4 | struct NotAFunction;
+  | ^^^^^^^^^^^^^^^^^^^^

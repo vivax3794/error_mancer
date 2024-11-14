@@ -1,0 +1,283 @@
+use convert_case::{Case, Casing};
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote, ToTokens};
+use syn::parse::Parser;
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::{
+    self,
+    parse2,
+    parse_macro_input,
+    parse_quote,
+    GenericArgument,
+    PathArguments,
+    ReturnType,
+    Token,
+    Type,
+    TypePath,
+};
+
+#[proc_macro_attribute]
+pub fn errors(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let attr = parse_macro_input!(attr);
+    let item = parse_macro_input!(item);
+    match errors_impl(attr, item) {
+        Ok(result) => result.into(),
+        Err(err) => err.into_compile_error().into(),
+    }
+}
+
+fn errors_impl(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
+    if let Ok(function) = syn::parse2(item.clone()) {
+        do_free_function(function, attr)
+    } else if let Ok(impl_block) = syn::parse2(item.clone()) {
+        do_impl_block(impl_block)
+    } else {
+        Err(syn::Error::new(
+            item.span(),
+            "Expected function or impl block",
+        ))
+    }
+}
+
+fn do_impl_block(mut impl_block: syn::ItemImpl) -> syn::Result<TokenStream> {
+    let mut enums = Vec::new();
+    for item in &mut impl_block.items {
+        if let syn::ImplItem::Fn(method) = item {
+            if let Some(attr) = method
+                .attrs
+                .iter()
+                .find(|&attr| attr.path().is_ident("errors"))
+            {
+                match attr.meta.clone() {
+                    syn::Meta::List(list) => {
+                        let arguments = list.tokens;
+                        let function = method.into_token_stream();
+                        let function = parse2(function)?;
+                        let (enum_decl, function) = create_function(function, arguments)?;
+                        enums.push(enum_decl);
+
+                        let function = function.into_token_stream();
+                        let function = parse2(function)?;
+                        *method = function;
+                    }
+                    syn::Meta::Path(_) => {
+                        let arguments = quote!();
+                        let function = method.into_token_stream();
+                        let function = parse2(function)?;
+                        let (enum_decl, function) = create_function(function, arguments)?;
+                        enums.push(enum_decl);
+
+                        let function = function.into_token_stream();
+                        let function = parse2(function)?;
+                        *method = function;
+                    }
+                    _ => {
+                        return Err(syn::Error::new(
+                            attr.span(),
+                            "Expected list or simple `#[errors]`",
+                        ))
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(quote! {
+        #(#enums)*
+        #impl_block
+    })
+}
+
+fn do_free_function(function: syn::ItemFn, attr: TokenStream) -> Result<TokenStream, syn::Error> {
+    let (enum_decl, new_function) = create_function(function, attr)?;
+    Ok(quote! {
+        #enum_decl
+        #new_function
+    })
+}
+
+fn create_function(
+    function: syn::ItemFn,
+    attr: TokenStream,
+) -> Result<(TokenStream, TokenStream), syn::Error> {
+    let vis = function.vis;
+    let mut signature = function.sig;
+    let body = function.block;
+
+    let ok_return_type = get_ok_return(&signature.output)?;
+    let (error_enum, error_return_type) =
+        generate_error_type(attr, signature.ident.to_string(), vis.clone())?;
+
+    let inner_type: syn::ReturnType =
+        parse_quote!(-> std::result::Result<#ok_return_type, #error_return_type>);
+
+    replace_error_value(&mut signature.output, error_return_type);
+
+    let new_func = quote! {
+        #[allow(clippy::needless_question_mark)]
+        #vis #signature {
+            Ok((move || #inner_type { #body })()?)
+        }
+    };
+    Ok((error_enum, new_func))
+}
+
+fn get_ok_return(return_type: &ReturnType) -> syn::Result<&Type> {
+    match return_type {
+        ReturnType::Default => Err(syn::Error::new(
+            return_type.span(),
+            "Function must have a return type of Result<Ok, Err>",
+        )),
+        ReturnType::Type(_, ty) => {
+            // Ensure the return type is a Path type
+            let type_path = match ty.as_ref() {
+                Type::Path(TypePath { path, .. }) => path,
+                _ => {
+                    return Err(syn::Error::new(
+                        ty.span(),
+                        "Expected return type to be a path, such as Result<Ok, Err>",
+                    ))
+                }
+            };
+
+            // Check if the last segment is 'Result'
+            let last_segment = type_path.segments.last().ok_or_else(|| {
+                syn::Error::new(type_path.span(), "Expected a path segment for Result")
+            })?;
+
+            if last_segment.ident != "Result" {
+                return Err(syn::Error::new(
+                    last_segment.ident.span(),
+                    "Expected return type to be Result<...>",
+                ));
+            }
+
+            // Ensure that Result has exactly two generic arguments
+            let generic_args = match &last_segment.arguments {
+                PathArguments::AngleBracketed(args) => &args.args,
+                _ => {
+                    return Err(syn::Error::new(
+                        last_segment.span(),
+                        "Expected angle-bracketed generic arguments, like Result<Ok, Err>",
+                    ))
+                }
+            };
+
+            // Extract the first generic argument (Ok type)
+            let ok_arg = generic_args.first().ok_or_else(|| {
+                syn::Error::new(
+                    generic_args.span(),
+                    "Expected at least one generic argument for Result",
+                )
+            })?;
+
+            match ok_arg {
+                GenericArgument::Type(ok_type) => Ok(ok_type),
+                _ => Err(syn::Error::new(
+                    ok_arg.span(),
+                    "Expected the first generic argument of Result to be a type",
+                )),
+            }
+        }
+    }
+}
+
+fn replace_error_value(return_type: &mut ReturnType, error_type: syn::Type) {
+    let ReturnType::Type(_, return_type) = return_type else {
+        return;
+    };
+
+    let syn::Type::Path(return_type) = return_type.as_mut() else {
+        return;
+    };
+
+    let Some(last) = return_type.path.segments.last_mut() else {
+        return;
+    };
+
+    if last.ident != "Result" {
+        return;
+    }
+
+    let syn::PathArguments::AngleBracketed(arguments) = &mut last.arguments else {
+        return;
+    };
+
+    if arguments.args.len() < 2 {
+        return;
+    }
+
+    if let syn::GenericArgument::Type(syn::Type::Infer(_)) = arguments.args[1] {
+        arguments.args[1] = syn::GenericArgument::Type(error_type);
+    }
+}
+
+fn generate_error_type(
+    args: TokenStream,
+    function_name: String,
+    vis: syn::Visibility,
+) -> syn::Result<(TokenStream, Type)> {
+    if args.is_empty() {
+        Ok((quote!(), parse_quote!(std::convert::Infallible)))
+    } else {
+        let enum_name = function_name.to_case(Case::Pascal);
+        let enum_name = format_ident!("{enum_name}Error");
+
+        let error_types = Punctuated::<syn::Path, Token![,]>::parse_terminated.parse2(args)?;
+        let (fields, from_impls): (Vec<_>, Vec<_>) = error_types
+            .iter()
+            .map(|path| {
+                let name = path
+                    .segments
+                    .iter()
+                    .map(|segment| segment.ident.to_string())
+                    .collect::<String>()
+                    .to_case(Case::Pascal);
+
+                let name = format_ident!("{name}");
+                (
+                    (
+                        name.clone(),
+                        quote!(
+                            #name(#path)
+                        ),
+                    ),
+                    quote!(
+                        impl ::std::convert::From<#path> for #enum_name {
+                            fn from(value: #path) -> Self {
+                                Self::#name(value)
+                            }
+                        }
+                    ),
+                )
+            })
+            .unzip();
+        let (names, fields): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
+
+        let enum_stream = quote! {
+            #[derive(::std::fmt::Debug)]
+            #vis enum #enum_name {
+                #(#fields),*
+            }
+
+            #(#from_impls)*
+
+            impl ::std::fmt::Display for #enum_name {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                    match self {
+                        #(Self::#names(err) => err.fmt(f),)*
+                    }
+                }
+            }
+
+            impl ::std::error::Error for #enum_name {}
+        };
+        let enum_type = parse_quote!(#enum_name);
+
+        Ok((enum_stream, enum_type))
+    }
+}

@@ -1,0 +1,6 @@
+max_width = 100
+format_macro_matchers = true
+hard_tabs = false
+imports_layout = "HorizontalVertical"
+imports_granularity = "Module"
+group_imports = "StdExternalCrate"
