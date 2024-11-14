@@ -147,6 +147,7 @@
 //!         }
 //!     }
 //! ```
+#![no_std]
 
 pub use error_mancer_macros::errors;
 

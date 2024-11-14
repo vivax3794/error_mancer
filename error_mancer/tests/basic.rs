@@ -1,7 +1,8 @@
 #![feature(assert_matches)]
+#![no_std]
 
-use std::assert_matches::assert_matches;
-use std::num::{ParseIntError, TryFromIntError};
+use core::assert_matches::assert_matches;
+use core::num::{ParseIntError, TryFromIntError};
 
 use error_mancer::prelude::*;
 

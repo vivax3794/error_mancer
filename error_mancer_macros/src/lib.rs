@@ -113,7 +113,7 @@ fn create_function(
         generate_error_type(attr, signature.ident.to_string(), vis.clone())?;
 
     let inner_type: syn::ReturnType =
-        parse_quote!(-> std::result::Result<#ok_return_type, #error_return_type>);
+        parse_quote!(-> core::result::Result<#ok_return_type, #error_return_type>);
 
     let replaced = replace_error_value(&mut signature.output, error_return_type);
 
@@ -270,14 +270,14 @@ fn generate_error_type(
     let (names, fields): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
 
     let enum_stream = quote! {
-        #[derive(::std::fmt::Debug)]
+        #[derive(::core::fmt::Debug)]
         #vis enum #enum_name {
             #(#fields),*
         }
 
         #(#from_impls)*
 
-        impl<T> ::std::convert::From<T> for #enum_name where Self: ::error_mancer::ErrorMancerFrom<T> {
+        impl<T> ::core::convert::From<T> for #enum_name where Self: ::error_mancer::ErrorMancerFrom<T> {
             fn from(value: T) -> Self {
                 ::error_mancer::ErrorMancerFrom::from(value)
             }
@@ -293,8 +293,8 @@ fn generate_error_type(
             }
         }
 
-        impl ::std::fmt::Display for #enum_name {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        impl ::core::fmt::Display for #enum_name {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 match self {
                     #(Self::#names(err) => err.fmt(f),)*
                     _ => unreachable!()
@@ -302,7 +302,7 @@ fn generate_error_type(
             }
         }
 
-        impl ::std::error::Error for #enum_name {}
+        impl ::core::error::Error for #enum_name {}
     };
     let enum_type = parse_quote!(#enum_name);
 

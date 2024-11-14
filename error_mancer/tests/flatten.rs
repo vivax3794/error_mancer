@@ -1,6 +1,7 @@
 #![feature(assert_matches)]
+#![no_std]
 
-use std::assert_matches::assert_matches;
+use core::assert_matches::assert_matches;
 
 use error_mancer::prelude::*;
 use thiserror::Error;
