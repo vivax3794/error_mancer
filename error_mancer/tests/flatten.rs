@@ -38,23 +38,16 @@ fn wrapped(x: i32) -> Result<i32, _> {
     Ok(result)
 }
 
-#[errors(Err1, Err2)]
+#[errors(Err1, Err2, Err3)]
 fn unwrapped(x: i32) -> Result<i32, _> {
-    let result = foo(x);
-    let result = handle! {
-        result => FooError {
-            propagate (Err1, Err2),
-            Err(Err3(_)) => 10,
-            Ok(_) => 20
-        }
-    };
-    Ok(result)
+    foo(x).into_super_error::<UnwrappedError>()?;
+    Ok(10)
 }
 
 #[test]
 fn test_unwrapped() {
-    assert_matches!(unwrapped(0), Ok(20));
+    assert_matches!(unwrapped(0), Ok(10));
     assert_matches!(unwrapped(1), Err(UnwrappedError::Err1(Err1)));
     assert_matches!(unwrapped(2), Err(UnwrappedError::Err2(Err2)));
-    assert_matches!(unwrapped(3), Ok(10));
+    assert_matches!(unwrapped(3), Err(UnwrappedError::Err3(Err3)));
 }

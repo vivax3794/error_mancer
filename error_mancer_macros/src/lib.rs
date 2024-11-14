@@ -238,6 +238,7 @@ fn generate_error_type(
     let enum_name = format_ident!("{enum_name}Error");
 
     let error_types = Punctuated::<syn::Path, Token![,]>::parse_terminated.parse2(args)?;
+    let error_types_clone = error_types.clone().into_iter().collect::<Vec<_>>();
     let (fields, from_impls): (Vec<_>, Vec<_>) = error_types
         .iter()
         .map(|path| {
@@ -279,6 +280,16 @@ fn generate_error_type(
         impl<T> ::std::convert::From<T> for #enum_name where Self: ::error_mancer::ErrorMancerFrom<T> {
             fn from(value: T) -> Self {
                 ::error_mancer::ErrorMancerFrom::from(value)
+            }
+        }
+
+        impl<T> ::error_mancer::FlattenInto<T> for #enum_name
+            where T: #(::error_mancer::ErrorMancerFrom<#error_types_clone>)+* {
+            fn flatten(self) -> T {
+                match self {
+                    #(Self::#names(err) => T::from(err),)*
+                    _ => unreachable!()
+                }
             }
         }
 

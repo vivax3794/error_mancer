@@ -11,16 +11,18 @@
 //! Below is a basic example of how to use the `errors` macro:
 //!
 //! ```rust
+//! # use error_mancer::prelude::*;
+//!
 //! #[errors(std::io::Error)]
 //! fn foo() -> Result<i32, _> {
-//!     std::fs::open("hello.txt")?;
+//!     std::fs::File::open("hello.txt")?;
 //!     Ok(10)
 //! }
 //! ```
 //!
 //! This macro automatically generates an enum resembling the following and sets the `Result` error type to it, so developers do not need to manually define it:
 //!
-//! ```rust
+//! ```rust,ignore
 //! #[derive(Debug)]
 //! enum FooError {
 //!     StdIoError(std::io::Error),
@@ -38,6 +40,9 @@
 //! To use the macro within an `impl` block, the block must also be annotated:
 //!
 //! ```rust
+//! # use error_mancer::prelude::*;
+//! # struct MyStruct;
+//!
 //! #[errors]
 //! impl MyStruct {
 //!     #[errors(std::io::Error)]
@@ -51,12 +56,41 @@
 //!
 //! The macro can also be used without overwriting an error type and is fully compatible with `anyhow::Result` and similar types. This is especially useful for developers who prefer using `anyhow` for general error handling but want to benefit from additional error type restrictions when needed, particularly in trait implementations:
 //!
-//! ```rust
+//! ```rust,compile_fail
+//! # use error_mancer::prelude::*;
+//!
 //! #[errors]
 //! fn foo() -> anyhow::Result<()> {
 //!     // This would cause a compiler error
-//!     // std::fs::open("hello.txt")?;
+//!     std::fs::File::open("hello.txt")?;
 //!     Ok(())
+//! }
+//! ```
+//!
+//! ## Upcasting types
+//! ```rust
+//! # use error_mancer::prelude::*;
+//! # use thiserror::Error;
+//! # #[derive(Error, Debug)]
+//! # #[error("1")]
+//! # struct Err1;
+//! # #[derive(Error, Debug)]
+//! # #[error("2")]
+//! # struct Err2;
+//! # #[derive(Error, Debug)]
+//! # #[error("3")]
+//! # struct Err3;
+//!
+//! #[errors(Err1, Err2)]
+//! fn foo() -> Result<i32, _> {
+//!     // ...
+//!     # todo!()
+//! }
+//!
+//! #[errors(Err1, Err2, Err3)]
+//! fn bar() -> Result<i32, _> {
+//!     let result = foo().into_super_error::<BarError>()?;
+//!     Ok(result)
 //! }
 //! ```
 //!
@@ -84,26 +118,42 @@
 //! ### Display Implementation
 //!
 //! The `Display` implementation simply delegates to each contained error, ensuring consistent and readable error messages.
+//!
+//! ### `into_super_error`
+//! This function uses the `FlattenInto` trait which is automatically implemented by the macro for
+//! its errors, for all types which implemnt `From<...>` for each of its variants. i.e a generated
+//! implementation might look like:
+//! ```rust
+//! # use error_mancer::{FlattenInto, errors};
+//! # use thiserror::Error;
+//! # #[derive(Error, Debug)]
+//! # #[error("1")]
+//! # struct Err1;
+//! # #[derive(Error, Debug)]
+//! # #[error("2")]
+//! # struct Err2;
+//! # enum OurError {
+//! #   Err1(Err1),
+//! #   Err2(Err2)
+//! # }
+//!
+//! impl<T> FlattenInto<T> for OurError
+//!     where T: From<Err1> + From<Err2> {
+//!         fn flatten(self) -> T {
+//!             match self {
+//!                 Self::Err1(err) => T::from(err),
+//!                 Self::Err2(err) => T::from(err),
+//!             }
+//!         }
+//!     }
+//! ```
 
 pub use error_mancer_macros::errors;
 
 pub mod prelude {
     pub use error_mancer_macros::errors;
 
-    pub use super::handle;
-}
-
-#[macro_export]
-macro_rules! handle {
-    {$expr:expr => $error:path {propagate ($($return_error:ident),*)$(,$pat:pat => $res:expr)*}} => {
-        {
-            use $error::*;
-            match $expr {
-                $(std::result::Result::Err($return_error(err)) => return Err(err.into()),)*
-                $($pat => $res,)*
-            }
-        }
-    };
+    pub use super::ResultExt;
 }
 
 #[doc(hidden)]
@@ -114,4 +164,27 @@ macro_rules! handle {
 )]
 pub trait ErrorMancerFrom<T> {
     fn from(value: T) -> Self;
+}
+
+/// This trait allows a error to be flattened into another one and is automatically implemented by
+/// the `#[errors]` macro for all super errors that implen `From<...>` for each of its fields.
+pub trait FlattenInto<T> {
+    fn flatten(self) -> T;
+}
+
+/// This trait extends `Result` with a additonal method to upcast a error enum.
+pub trait ResultExt<T, E> {
+    /// This will convert from the current `E` into the specified super error.
+    fn into_super_error<S>(self) -> Result<T, S>
+    where
+        E: FlattenInto<S>;
+}
+
+impl<T, E> ResultExt<T, E> for Result<T, E> {
+    fn into_super_error<S>(self) -> Result<T, S>
+    where
+        E: FlattenInto<S>,
+    {
+        self.map_err(|err| err.flatten())
+    }
 }
