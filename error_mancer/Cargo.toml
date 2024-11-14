@@ -1,11 +1,11 @@
 [package]
 name = "error_mancer"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
-description = "Master your errors with precision, context, and effortless control."
+description = "Quickly define custom error enums for a function."
 license = "MIT"
 authors = ["vivax3794@protonmail.com"]
-readme = "README.md"
+readme = "../README.md"
 repository = "https://github.com/vivax3794/error_mancer"
 categories = ["rust-patterns"]
 keywords = ["macro", "attribute-macro", "error", "error-handling"]
