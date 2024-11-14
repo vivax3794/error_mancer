@@ -27,6 +27,7 @@ trait Foo {
 
 struct IShouldntError;
 
+#[errors]
 impl Foo for IShouldntError {
     #[errors]
     fn foo(&self) -> Result<i32> {

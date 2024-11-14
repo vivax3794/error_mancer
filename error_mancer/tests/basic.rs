@@ -17,6 +17,7 @@ fn no_errors() {
 
 #[errors(ParseIntError, TryFromIntError)]
 fn bar(x: &str) -> Result<u8, _> {
+    std::fs::read("hello.txt")?;
     let result: i16 = x.parse()?;
     let result = result.try_into()?;
     Ok(result)

@@ -221,63 +221,66 @@ fn generate_error_type(
     function_name: String,
     vis: syn::Visibility,
 ) -> syn::Result<(TokenStream, Type)> {
-    if args.is_empty() {
-        Ok((quote!(), parse_quote!(std::convert::Infallible)))
-    } else {
-        let enum_name = function_name.to_case(Case::Pascal);
-        let enum_name = format_ident!("{enum_name}Error");
+    let enum_name = function_name.to_case(Case::Pascal);
+    let enum_name = format_ident!("{enum_name}Error");
 
-        let error_types = Punctuated::<syn::Path, Token![,]>::parse_terminated.parse2(args)?;
-        let (fields, from_impls): (Vec<_>, Vec<_>) = error_types
-            .iter()
-            .map(|path| {
-                let name = path
-                    .segments
-                    .iter()
-                    .map(|segment| segment.ident.to_string())
-                    .collect::<String>()
-                    .to_case(Case::Pascal);
+    let error_types = Punctuated::<syn::Path, Token![,]>::parse_terminated.parse2(args)?;
+    let (fields, from_impls): (Vec<_>, Vec<_>) = error_types
+        .iter()
+        .map(|path| {
+            let name = path
+                .segments
+                .iter()
+                .map(|segment| segment.ident.to_string())
+                .collect::<String>()
+                .to_case(Case::Pascal);
 
-                let name = format_ident!("{name}");
+            let name = format_ident!("{name}");
+            (
                 (
-                    (
-                        name.clone(),
-                        quote!(
-                            #name(#path)
-                        ),
-                    ),
+                    name.clone(),
                     quote!(
-                        impl ::std::convert::From<#path> for #enum_name {
-                            fn from(value: #path) -> Self {
-                                Self::#name(value)
-                            }
-                        }
+                        #name(#path)
                     ),
-                )
-            })
-            .unzip();
-        let (names, fields): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
-
-        let enum_stream = quote! {
-            #[derive(::std::fmt::Debug)]
-            #vis enum #enum_name {
-                #(#fields),*
-            }
-
-            #(#from_impls)*
-
-            impl ::std::fmt::Display for #enum_name {
-                fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                    match self {
-                        #(Self::#names(err) => err.fmt(f),)*
+                ),
+                quote!(
+                    impl ::error_mancer::ErrorMancerFrom<#path> for #enum_name {
+                        fn from(value: #path) -> Self {
+                            Self::#name(value)
+                        }
                     }
+                ),
+            )
+        })
+        .unzip();
+    let (names, fields): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
+
+    let enum_stream = quote! {
+        #[derive(::std::fmt::Debug)]
+        #vis enum #enum_name {
+            #(#fields),*
+        }
+
+        #(#from_impls)*
+
+        impl<T> ::std::convert::From<T> for #enum_name where Self: ::error_mancer::ErrorMancerFrom<T> {
+            fn from(value: T) -> Self {
+                Self::from(value)
+            }
+        }
+
+        impl ::std::fmt::Display for #enum_name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                match self {
+                    #(Self::#names(err) => err.fmt(f),)*
+                    _ => unreachable!()
                 }
             }
+        }
 
-            impl ::std::error::Error for #enum_name {}
-        };
-        let enum_type = parse_quote!(#enum_name);
+        impl ::std::error::Error for #enum_name {}
+    };
+    let enum_type = parse_quote!(#enum_name);
 
-        Ok((enum_stream, enum_type))
-    }
+    Ok((enum_stream, enum_type))
 }

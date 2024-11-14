@@ -1,3 +1,5 @@
+pub use error_mancer_macros::errors;
+
 pub mod prelude {
     pub use error_mancer_macros::errors;
 
@@ -15,4 +17,14 @@ macro_rules! handle {
             }
         }
     };
+}
+
+#[doc(hidden)]
+#[diagnostic::on_unimplemented(
+    message = "Error `{T}` not allowed to be returned from this function.",
+    label = "`{T}` is not listed in `#[errors]` attribute",
+    note = "Add `{T}` to `#[errors]` attribute or handle this error locally."
+)]
+pub trait ErrorMancerFrom<T> {
+    fn from(value: T) -> Self;
 }
