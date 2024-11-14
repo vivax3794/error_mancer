@@ -11,7 +11,7 @@ categories = ["rust-patterns"]
 keywords = ["macro", "attribute-macro", "error", "error-handling"]
 
 [dependencies]
-error_mancer_macros = {path = "../error_mancer_macros", version="0.2.1"}
+error_mancer_macros = {path = "../error_mancer_macros", version="0.2.3"}
 
 [dev-dependencies]
 trybuild = "1"
