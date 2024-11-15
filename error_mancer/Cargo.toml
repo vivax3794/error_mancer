@@ -1,6 +1,6 @@
 [package]
 name = "error_mancer"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "Quickly define custom error enums for a function."
 license = "MIT"
@@ -11,7 +11,7 @@ categories = ["rust-patterns"]
 keywords = ["macro", "attribute-macro", "error", "error-handling", "no-std"]
 
 [dependencies]
-error_mancer_macros = {path = "../error_mancer_macros", version="0.3.1"}
+error_mancer_macros = {path = "../error_mancer_macros", version="0.4.0"}
 
 [dev-dependencies]
 trybuild = "1"
