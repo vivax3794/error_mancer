@@ -18,6 +18,13 @@
 //!     std::fs::File::open("hello.txt")?;
 //!     Ok(10)
 //! }
+//!
+//! fn bar() {
+//!     match foo() {
+//!         Err(FooError::StdIo(_)) => {/* Handle error */},
+//!         Ok(_) => {/* Handle success */}
+//!     }
+//! }
 //! ```
 //!
 //! This macro automatically generates an enum resembling the following and sets the `Result` error type to it, so developers do not need to manually define it:
@@ -25,7 +32,7 @@
 //! ```rust,ignore
 //! #[derive(Debug)]
 //! enum FooError {
-//!     StdIoError(std::io::Error),
+//!     StdIo(std::io::Error),
 //! }
 //!
 //! impl From<std::io::Error> for FooError { ... }
@@ -113,7 +120,7 @@
 //!
 //! ### Naming Conventions
 //!
-//! The enum name is derived from the function name, converted to Pascal case using the `case_fold` crate to conform to Rust naming conventions for types and enums. Similarly, variant names are derived from the path segments of the types. For example, `std::io::Error` would produce a variant called `StdIoError`, while `io::Error` would produce `IoError`.
+//! The enum name is derived from the function name, converted to Pascal case using the `case_fold` crate to conform to Rust naming conventions for types and enums. Similarly, variant names are derived from the path segments of the types, with the "Error" suffix removed if present. For example, `std::io::Error` would produce a variant called `StdIo`, while `io::Error` would produce `Io`.
 //!
 //! ### Display Implementation
 //!

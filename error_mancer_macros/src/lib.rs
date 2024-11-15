@@ -245,11 +245,12 @@ fn generate_error_type(
             let name = path
                 .segments
                 .iter()
-                .map(|segment| segment.ident.to_string())
+                .map(|segment| segment.ident.to_string() + "_")
                 .collect::<String>()
                 .to_case(Case::Pascal);
-
+            let name = name.trim_end_matches("Error");
             let name = format_ident!("{name}");
+
             (
                 (
                     name.clone(),

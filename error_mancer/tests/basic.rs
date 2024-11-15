@@ -26,8 +26,8 @@ fn bar(x: &str) -> Result<u8, _> {
 #[test]
 fn specify_error_tests() {
     assert!(bar("10").is_ok());
-    assert_matches!(bar("abc"), Err(BarError::ParseIntError(_)));
-    assert_matches!(bar("300"), Err(BarError::TryFromIntError(_)));
+    assert_matches!(bar("abc"), Err(BarError::ParseInt(_)));
+    assert_matches!(bar("300"), Err(BarError::TryFromInt(_)));
 }
 
 mod module {
@@ -44,7 +44,7 @@ mod module {
 fn pub_works() {
     assert_matches!(
         module::in_module(),
-        Err(module::InModuleError::TryFromIntError(_))
+        Err(module::InModuleError::TryFromInt(_))
     );
 }
 
