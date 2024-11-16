@@ -21,8 +21,8 @@ fn open_file() -> Result<SomeStruct, _> {
 
 fn main() {
     match open_file() {
-        Err(OpenFileError::IoError(err)) => { /* Handle I/O error */ },  
-        Err(OpenFileError::SerdeJsonError(err)) => { /* Handle JSON parsing error */ },
+        Err(OpenFileError::Io(err)) => { /* Handle I/O error */ },  
+        Err(OpenFileError::SerdeJson(err)) => { /* Handle JSON parsing error */ },
         Ok(data) => { /* Use data */ }
     }
 }
