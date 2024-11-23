@@ -23,5 +23,5 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          cargo -Z package-workspace publish --workspace
+          cargo -Z package-workspace publish --workspace --token $CARGO_REGISTRY_TOKEN
 
