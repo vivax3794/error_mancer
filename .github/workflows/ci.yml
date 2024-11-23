@@ -14,12 +14,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: actions/setup-rust@v1
-        with:
-          profile: minimal
-          toolchain: stable
-
       - uses: Swatinem/rust-cache@v2
 
       - name: Run Tests
@@ -31,12 +25,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-
-      - name: Install Rust
-        uses: actions/setup-rust@v1
-        with:
-          profile: minimal
-          toolchain: stable
 
       - name: Install Clippy and Rustfmt
         run: rustup component add clippy rustfmt
