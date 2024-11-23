@@ -14,11 +14,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
+      - name: Use nightly
+        run: rustup default nightly
+
       - uses: Swatinem/rust-cache@v2
 
       - name: Publish Workspace
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          cargo publish --workspace --token "$CARGO_REGISTRY_TOKEN"
+          cargo -Z package-workspace publish --workspace
 
