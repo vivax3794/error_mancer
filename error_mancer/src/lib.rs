@@ -101,6 +101,28 @@
 //! }
 //! ```
 //!
+//! ## Deriving traits for generated enum
+//! You can annotate the function with `#[derive]` to derive traits for the generated enum.
+//! Note that the `#[derive]` macro must be used after the `errors` macro. (techically in `impl`
+//! blocks the order doesnt matter, but we recommend using `#[derive]` after `errors` for consistency.)
+//! ```rust
+//! # use error_mancer::prelude::*;
+//! # use thiserror::Error;
+//! # #[derive(Error, Debug, Clone)]
+//! # #[error("1")]
+//! # struct Err1;
+//!
+//! #[errors(Err1)]
+//! #[derive(Clone)]
+//! fn foo() -> Result<(), _> {
+//!     Ok(())
+//! }
+//!
+//! fn bar() {
+//!     let _ = foo().clone();
+//! }
+//! ```
+//!
 //! ## Specifics and Implementation Details
 //!
 //! ### Error Type Overwriting
