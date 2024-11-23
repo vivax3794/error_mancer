@@ -1,3 +1,6 @@
+# 0.4.1
+* Added support for annotating error types with `#[derive]` attribute to derive extra traits.
+
 # 0.4.0
 * Fixed variant name construction: Did not actually consider each path segment as a proper word.
 * Cleaned up variant names: Now strips "Error" suffix if present.

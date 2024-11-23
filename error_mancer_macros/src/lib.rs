@@ -104,13 +104,22 @@ fn create_function(
     function: syn::ItemFn,
     attr: TokenStream,
 ) -> Result<(TokenStream, TokenStream), syn::Error> {
+    let derives = match function
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("derive"))
+    {
+        Some(attr) => attr.to_token_stream(),
+        None => quote!(),
+    };
+
     let vis = function.vis;
     let mut signature = function.sig;
     let body = function.block;
 
     let ok_return_type = get_ok_return(&signature.output)?;
     let (error_enum, error_return_type) =
-        generate_error_type(attr, signature.ident.to_string(), vis.clone())?;
+        generate_error_type(attr, signature.ident.to_string(), vis.clone(), derives)?;
 
     let inner_type: syn::ReturnType =
         parse_quote!(-> core::result::Result<#ok_return_type, #error_return_type>);
@@ -233,6 +242,7 @@ fn generate_error_type(
     args: TokenStream,
     function_name: String,
     vis: syn::Visibility,
+    derives: TokenStream,
 ) -> syn::Result<(TokenStream, Type)> {
     let enum_name = function_name.to_case(Case::Pascal);
     let enum_name = format_ident!("{enum_name}Error");
@@ -272,6 +282,7 @@ fn generate_error_type(
 
     let enum_stream = quote! {
         #[derive(::core::fmt::Debug)]
+        #derives
         #vis enum #enum_name {
             #(#fields),*
         }
