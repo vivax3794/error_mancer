@@ -117,9 +117,14 @@ fn create_function(
     let mut signature = function.sig;
     let body = function.block;
 
-    let ok_return_type = get_ok_return(&signature.output)?;
-    let (error_enum, error_return_type) =
-        generate_error_type(attr, signature.ident.to_string(), vis.clone(), derives)?;
+    let (ok_return_type, error_name) = get_return_generics(&signature.output)?;
+    let (error_enum, error_return_type) = generate_error_type(
+        attr,
+        signature.ident.to_string(),
+        vis.clone(),
+        derives,
+        error_name,
+    )?;
 
     let inner_type: syn::ReturnType =
         parse_quote!(-> ::core::result::Result<#ok_return_type, #error_return_type>);
@@ -146,7 +151,7 @@ fn create_function(
     }
 }
 
-fn get_ok_return(return_type: &ReturnType) -> syn::Result<&Type> {
+fn get_return_generics(return_type: &ReturnType) -> syn::Result<&Type> {
     match return_type {
         ReturnType::Default => Err(syn::Error::new(
             return_type.span(),
@@ -243,9 +248,14 @@ fn generate_error_type(
     function_name: String,
     vis: syn::Visibility,
     derives: TokenStream,
+    enum_name: Option<syn::Ident>,
 ) -> syn::Result<(TokenStream, Type)> {
-    let enum_name = function_name.to_case(Case::Pascal);
-    let enum_name = format_ident!("{enum_name}Error");
+    let enum_name = if let Some(enum_name) = enum_name {
+        enum_name
+    } else {
+        let enum_name = function_name.to_case(Case::Pascal);
+        format_ident!("{enum_name}Error")
+    };
 
     let error_types = Punctuated::<syn::Path, Token![,]>::parse_terminated.parse2(args)?;
     let error_types_clone = error_types.clone().into_iter().collect::<Vec<_>>();
