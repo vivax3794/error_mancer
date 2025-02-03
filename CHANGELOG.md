@@ -1,3 +1,8 @@
+# 0.4.2
+* **feature:** You can now set an explicit enum name by providing a ident instead of `_` as the error type in the signature.
+* **Fix**: Some part of the generated code didnt have `::...` for a stdlib reference, which in theory could leave it open to name shadowing and hence breaking.
+* **Cleanup**: Make docs nicer
+
 # 0.4.1
 * Added support for annotating error types with `#[derive]` attribute to derive extra traits.
 
