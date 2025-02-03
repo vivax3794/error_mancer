@@ -122,7 +122,7 @@ fn create_function(
         generate_error_type(attr, signature.ident.to_string(), vis.clone(), derives)?;
 
     let inner_type: syn::ReturnType =
-        parse_quote!(-> core::result::Result<#ok_return_type, #error_return_type>);
+        parse_quote!(-> ::core::result::Result<#ok_return_type, #error_return_type>);
 
     let replaced = replace_error_value(&mut signature.output, error_return_type);
 

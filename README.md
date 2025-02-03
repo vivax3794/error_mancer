@@ -6,6 +6,8 @@ The `error_mancer` crate adds a `#[errors]` attribute that allows you to easily 
 
 ## Example Usage
 
+For example in the following code the `#[errors]` macro automatically defines a `OpenFileError` based on the macro and substitudes in the error type in the signature.
+
 ```rs
 use std::io;
 
@@ -28,9 +30,10 @@ fn main() {
 }
 ```
 
-The main benefit of this approach is that it moves the error enum definition much closer to the method, making it easier to modify. Additionally, it supports generic error results like `anyhow`. In these cases, the return type is not modified, but the allowed return values are still restricted. This is particularly useful when implementing traits that require an `anyhow::Result`.
+The main benefit of this approach is that it moves the error enum definition much closer to the method, making it easier to modify. 
 
-## Trait Implementation Example
+## `anyhow` support
+Additionally, it supports generic error results like `anyhow`. In these cases, the return type is not modified, but the allowed return values are still restricted. This is particularly useful when implementing traits that require an `anyhow::Result`.
 
 ```rs
 use error_mancer::*;
@@ -39,8 +42,8 @@ use error_mancer::*;
 impl other_crate::Trait for MyStruct {
     #[errors]
     fn some_method(&self) -> anyhow::Result<()> {
-        // This would cause a compiler error now!
-        // std::fs::open("hello.txt")?;
+        // This is a compiler error now!
+        std::fs::open("hello.txt")?;
     }
 }
 ```
@@ -49,4 +52,7 @@ impl other_crate::Trait for MyStruct {
 
 - **Simplified Error Wrapper Enums**: This crate aims to make defining trivial error wrapper enums much easier and more convenient.
 - **Enforcing Error Restrictions**: It aims to allow you to enforce error restrictions on `anyhow::Result` and similar `Result` types.
-- **Compatibility with `thiserror`**: This crate does **not** aim to replace `thiserror` or similar libraries. Instead, it encourages using them in tandem to define errors for use with `error_mancer`.
+- **Compatibility with `thiserror`**: This crate does **not** aim to replace `thiserror` or similar libraries. They are designed for public-facing errors where control over details is important. In contrast, this library is focused on minimizing boilerplate as much as possible, providing less control but offering sensible defaults for internal error enums.
+
+In other words, what if `anyhow` was strongly typed on the possible errors?
+

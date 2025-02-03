@@ -1,12 +1,8 @@
-//! # `errors` Macro Documentation
-//!
-//! ## Overview
-//!
 //! The primary macro in this crate is `errors`, designed to simplify error handling by allowing developers to define and restrict error types directly within functions. This reduces boilerplate code and improves readability.
 //!
-//! ## Usage
+//! # Usage
 //!
-//! ### Basic Example
+//! ## Basic Example
 //!
 //! Below is a basic example of how to use the `errors` macro:
 //!
@@ -30,6 +26,7 @@
 //! This macro automatically generates an enum resembling the following and sets the `Result` error type to it, so developers do not need to manually define it:
 //!
 //! ```rust,ignore
+//! // Auto generated code from `#[errors]`
 //! #[derive(Debug)]
 //! enum FooError {
 //!     StdIo(std::io::Error),
@@ -42,7 +39,7 @@
 //!
 //! Defining no errors also works, which will generate an enum with no variants, enforcing that no errors are returned. This is useful for functions that are guaranteed not to fail but still require a `Result<...>` return type, such as in trait implementations. It provides extra safety by ensuring that no error paths are possible.
 //!
-//! ### Usage in `impl` Blocks
+//! ## Usage in `impl` Blocks
 //!
 //! To use the macro within an `impl` block, the block must also be annotated:
 //!
@@ -59,7 +56,7 @@
 //! }
 //! ```
 //!
-//! ### Usage with `anyhow::Result`
+//! ## Usage with `anyhow::Result`
 //!
 //! The macro can also be used without overwriting an error type and is fully compatible with `anyhow::Result` and similar types. This is especially useful for developers who prefer using `anyhow` for general error handling but want to benefit from additional error type restrictions when needed, particularly in trait implementations:
 //!
@@ -68,7 +65,8 @@
 //!
 //! #[errors]
 //! fn foo() -> anyhow::Result<()> {
-//!     // This would cause a compiler error
+//!     // ❌ Compiler error: `std::fs::File::open(...)` returns `std::io::Error`,
+//!     // but `#[errors]` enforces that no errors are allowed.
 //!     std::fs::File::open("hello.txt")?;
 //!     Ok(())
 //! }
@@ -103,7 +101,7 @@
 //!
 //! ## Deriving traits for generated enum
 //! You can annotate the function with `#[derive]` to derive traits for the generated enum.
-//! Note that the `#[derive]` macro must be used after the `errors` macro. (techically in `impl`
+//! Note that the `#[derive]` macro must be used after the `errors` macro. (technically in `impl`
 //! blocks the order doesnt matter, but we recommend using `#[derive]` after `errors` for consistency.)
 //! ```rust
 //! # use error_mancer::prelude::*;
@@ -123,9 +121,9 @@
 //! }
 //! ```
 //!
-//! ## Specifics and Implementation Details
+//! # Specifics and Implementation Details
 //!
-//! ### Error Type Overwriting
+//! ## Error Type Overwriting
 //!
 //! The macro looks for a type named `Result` in the root of the return type. If the second generic argument is `_`, it replaces it with the appropriate error type. See the examples below:
 //!
@@ -134,23 +132,23 @@
 //! | `Result<T, _>`              | `Result<T, FooError>`                            |
 //! | `std::result::Result<T, _>` | `std::result::Result<T, FooError>`               |
 //! | `anyhow::Result<T>`         | `anyhow::Result<T>`                              |
-//! | `Vec<Result<T, _>>`         | `Vec<Result<T, _>>`, leading to a compiler error |
+//! | `Vec<Result<T, _>>`         | ❌ compiler error, nested types arent replaced   |
 //!
-//! ### Enum Visibility
+//! ## Enum Visibility
 //!
 //! The generated enum takes on the visibility of the function. The only exception is when the error type is not replaced, such as with `anyhow::Result`. In this case, the enum is emitted inside the function body, making it inaccessible to the rest of the module.
 //!
-//! ### Naming Conventions
+//! ## Naming Conventions
 //!
 //! The enum name is derived from the function name, converted to Pascal case using the `case_fold` crate to conform to Rust naming conventions for types and enums. Similarly, variant names are derived from the path segments of the types, with the "Error" suffix removed if present. For example, `std::io::Error` would produce a variant called `StdIo`, while `io::Error` would produce `Io`.
 //!
-//! ### Display Implementation
+//! ## Display Implementation
 //!
 //! The `Display` implementation simply delegates to each contained error, ensuring consistent and readable error messages.
 //!
-//! ### `into_super_error`
+//! ## `into_super_error`
 //! This function uses the `FlattenInto` trait which is automatically implemented by the macro for
-//! its errors, for all types which implemnt `From<...>` for each of its variants. i.e a generated
+//! its errors, for all target types which implemnt `From<...>` for each of the errors variants. i.e a generated
 //! implementation might look like:
 //! ```rust
 //! # use error_mancer::{FlattenInto, errors};
@@ -197,12 +195,12 @@ pub trait ErrorMancerFrom<T> {
 }
 
 /// This trait allows a error to be flattened into another one and is automatically implemented by
-/// the `#[errors]` macro for all super errors that implen `From<...>` for each of its fields.
+/// the `#[errors]` macro for all super errors that implement `From<...>` for each of its fields.
 pub trait FlattenInto<T> {
     fn flatten(self) -> T;
 }
 
-/// This trait extends `Result` with a additonal method to upcast a error enum.
+/// This trait extends `Result` with an additional method to upcast a error enum.
 pub trait ResultExt<T, E> {
     /// This will convert from the current `E` into the specified super error.
     fn into_super_error<S>(self) -> Result<T, S>
@@ -211,6 +209,7 @@ pub trait ResultExt<T, E> {
 }
 
 impl<T, E> ResultExt<T, E> for Result<T, E> {
+    #[inline(always)]
     fn into_super_error<S>(self) -> Result<T, S>
     where
         E: FlattenInto<S>,
