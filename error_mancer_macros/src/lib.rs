@@ -10,6 +10,7 @@ use syn::{
     parse_macro_input,
     parse_quote,
     GenericArgument,
+    Path,
     PathArguments,
     ReturnType,
     Token,
@@ -117,13 +118,13 @@ fn create_function(
     let mut signature = function.sig;
     let body = function.block;
 
-    let (ok_return_type, error_name) = get_return_generics(&signature.output)?;
+    let (ok_return_type, explicit_error_name) = get_return_generics(&signature.output)?;
     let (error_enum, error_return_type) = generate_error_type(
         attr,
         signature.ident.to_string(),
         vis.clone(),
         derives,
-        error_name,
+        explicit_error_name.clone(),
     )?;
 
     let inner_type: syn::ReturnType =
@@ -131,7 +132,9 @@ fn create_function(
 
     let replaced = replace_error_value(&mut signature.output, error_return_type);
 
-    if replaced {
+    let emit_enum_outside = replaced || explicit_error_name.is_some();
+
+    if emit_enum_outside {
         let new_func = quote! {
             #[allow(clippy::needless_question_mark)]
             #vis #signature {
@@ -151,7 +154,7 @@ fn create_function(
     }
 }
 
-fn get_return_generics(return_type: &ReturnType) -> syn::Result<&Type> {
+fn get_return_generics(return_type: &ReturnType) -> syn::Result<(&Type, Option<syn::Ident>)> {
     match return_type {
         ReturnType::Default => Err(syn::Error::new(
             return_type.span(),
@@ -199,14 +202,39 @@ fn get_return_generics(return_type: &ReturnType) -> syn::Result<&Type> {
                     "Expected at least one generic argument for Result",
                 )
             })?;
+            let ok_type = match ok_arg {
+                GenericArgument::Type(ok_type) => ok_type,
+                _ => {
+                    return Err(syn::Error::new(
+                        ok_arg.span(),
+                        "Expected the first generic argument of Result to be a type",
+                    ))
+                }
+            };
 
-            match ok_arg {
-                GenericArgument::Type(ok_type) => Ok(ok_type),
-                _ => Err(syn::Error::new(
-                    ok_arg.span(),
-                    "Expected the first generic argument of Result to be a type",
-                )),
-            }
+            // Extract the second generic argument (Ok type)
+            let err_arg = generic_args.get(1);
+            let enum_name = match err_arg {
+                Some(GenericArgument::Type(Type::Infer(_))) => None,
+                Some(GenericArgument::Type(Type::Path(TypePath {
+                    path: Path { segments, .. },
+                    qself: None,
+                }))) => {
+                    if segments.len() != 1 {
+                        return Ok((ok_type, None));
+                    }
+                    let segment = &segments[0];
+
+                    if !segment.arguments.is_empty() {
+                        return Ok((ok_type, None));
+                    }
+
+                    Some(segment.ident.clone())
+                }
+                _ => None,
+            };
+
+            Ok((ok_type, enum_name))
         }
     }
 }
