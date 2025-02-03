@@ -39,6 +39,25 @@
 //!
 //! Defining no errors also works, which will generate an enum with no variants, enforcing that no errors are returned. This is useful for functions that are guaranteed not to fail but still require a `Result<...>` return type, such as in trait implementations. It provides extra safety by ensuring that no error paths are possible.
 //!
+//! ## Enum name
+//! You can also explicitly set the enum name by using a Ident instead of `_` in the signature
+//! ```rust
+//! # use error_mancer::prelude::*;
+//!
+//! #[errors(std::io::Error)]
+//! fn foo() -> Result<i32, MyErrorEnum> {
+//!     std::fs::File::open("hello.txt")?;
+//!     Ok(10)
+//! }
+//!
+//! fn bar() {
+//!     match foo() {
+//!         Err(MyErrorEnum::StdIo(_)) => {/* ... */},
+//!         Ok(_) => {/* ... */}
+//!     }
+//! }
+//! ```
+//!
 //! ## Usage in `impl` Blocks
 //!
 //! To use the macro within an `impl` block, the block must also be annotated:
@@ -130,13 +149,45 @@
 //! | Original                    | Modified                                         |
 //! | --------------------------- | ------------------------------------------------ |
 //! | `Result<T, _>`              | `Result<T, FooError>`                            |
+//! | `Result<T, CustomName>`     | `Result<T, CustomName>`                          |
+//! | `Result<T, Box<dyn Error>>` | `Result<T, Box<dyn Error>>`                      |
 //! | `std::result::Result<T, _>` | `std::result::Result<T, FooError>`               |
 //! | `anyhow::Result<T>`         | `anyhow::Result<T>`                              |
 //! | `Vec<Result<T, _>>`         | ❌ compiler error, nested types arent replaced   |
 //!
 //! ## Enum Visibility
 //!
-//! The generated enum takes on the visibility of the function. The only exception is when the error type is not replaced, such as with `anyhow::Result`. In this case, the enum is emitted inside the function body, making it inaccessible to the rest of the module.
+//! The enum can either be emitted inside the function body, or alongside the function (in which
+//! case it takes on the functions visibility) based on the
+//! following conditions:
+//! * If the second generic argument in `Result` is `_` its emitted outside the function.
+//! * If the second generic argument in `Result` is a simple identifier its emitted outside.
+//! * Otherwise, the enum is generated inside the function body and cannot be accessed externally.
+//!
+//! (in the following example the enums are include to illustrate where the macro would
+//! generate them.)
+//! ```rust,ignore
+//! #[errors]
+//! fn foo() -> Result<(), _> { ... }
+//!
+//! // enum FooError {...}
+//!
+//! #[errors]
+//! pub fn bar() -> Result<(), _> { ... }
+//!
+//! // pub enum FooError {...}
+//!
+//! #[errors]
+//! pub fn baz() -> Result<(), CustomName> { ... }
+//!
+//! // pub enum CustomName {...}
+//!
+//! #[errors]
+//! pub fn secret() -> anyhow::Result<()> {
+//!     // enum SecretError { ... }
+//!     // ...
+//! }
+//! ```
 //!
 //! ## Naming Conventions
 //!
