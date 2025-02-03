@@ -1,15 +1,7 @@
 error: Function must have a return type of Result<Ok, Err>
- --> tests/ui/missing_return_type.rs:4:1
+ --> tests/ui/missing_return_type.rs:3:1
   |
-4 | #[errors]
+3 | #[errors]
   | ^^^^^^^^^
   |
   = note: this error originates in the attribute macro `errors` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-warning: unused import: `anyhow::Result`
- --> tests/ui/missing_return_type.rs:1:5
-  |
-1 | use anyhow::Result;
-  |     ^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
