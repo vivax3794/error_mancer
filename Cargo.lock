@@ -61,7 +61,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "error_mancer"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "anyhow",
  "error_mancer_macros",
@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "error_mancer_macros"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "convert_case",
  "proc-macro2",
