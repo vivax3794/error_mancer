@@ -134,11 +134,22 @@ fn create_function(
 
     let emit_enum_outside = replaced || explicit_error_name.is_some();
 
+    let maybe_async = if signature.asyncness.is_some() {
+        quote!(async)
+    } else {
+        quote!()
+    };
+    let maybe_await = if signature.asyncness.is_some() {
+        quote!(.await)
+    } else {
+        quote!()
+    };
+
     if emit_enum_outside {
         let new_func = quote! {
             #[allow(clippy::needless_question_mark)]
             #vis #signature {
-                Ok((move || #inner_type { #body })()?)
+                Ok((#maybe_async move || #inner_type { #body })()#maybe_await?)
             }
         };
         Ok((error_enum, new_func))
@@ -147,7 +158,7 @@ fn create_function(
             #[allow(clippy::needless_question_mark)]
             #vis #signature {
                 #error_enum
-                Ok((move || #inner_type { #body })()?)
+                Ok((#maybe_async move || #inner_type { #body })()#maybe_await?)
             }
         };
         Ok((quote!(), new_func))
