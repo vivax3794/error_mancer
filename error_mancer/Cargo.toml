@@ -17,3 +17,4 @@ error_mancer_macros = {path = "../error_mancer_macros", version="0.4.2"}
 trybuild = "1"
 anyhow = "1"
 thiserror = "2"
+tokio = { version = "1.43.0", features = ["macros", "rt"] }
