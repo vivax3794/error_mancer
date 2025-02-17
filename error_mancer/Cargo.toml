@@ -1,6 +1,6 @@
 [package]
 name = "error_mancer"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 description = "Quickly define custom error enums for a function."
 license = "MIT"
@@ -17,3 +17,4 @@ error_mancer_macros = {path = "../error_mancer_macros", version="0.4.2"}
 trybuild = "1"
 anyhow = "1"
 thiserror = "2"
+tokio = { version = "1.43.0", features = ["macros", "rt"] }
