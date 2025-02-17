@@ -1,3 +1,6 @@
+# 0.4.3
+* **feature:** Now correctly works on async functions.
+
 # 0.4.2
 * **feature:** You can now set an explicit enum name by providing a ident instead of `_` as the error type in the signature.
 * **Fix**: Some part of the generated code didnt have `::...` for a stdlib reference, which in theory could leave it open to name shadowing and hence breaking.
